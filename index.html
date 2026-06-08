@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KopiCents Clean // Smart Time-Paced Scoring</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --primary: #06b6d4;
+            --secondary: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #334155;
+        }
+
+        header h1 { font-size: 24px; font-weight: 800; }
+        header h1 span { color: var(--primary); }
+        header p { color: var(--text-muted); font-size: 13px; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background-color: var(--card-dark);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.budget-crisis {
+            background-color: #450a0a !important;
+            border-color: var(--danger) !important;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #fff;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background-color: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        button:hover { filter: brightness(1.1); }
+        .btn-success { background-color: var(--success); }
+        .btn-purple { background-color: var(--purple); }
+        .btn-muted { background-color: #475569; }
+
+        .progress-container { background: #0f172a; border-radius: 10px; height: 10px; width: 100%; overflow: hidden; margin: 6px 0; border: 1px solid #334155; }
+        .progress-bar { height: 100%; width: 0%; background-color: var(--primary); transition: width 0.3s; }
+
+        .score-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+        .score-display { font-size: 36px; font-weight: 900; }
+
+        .tree-viewport {
+            height: 100px;
+            background: linear-gradient(to top, #0f172a, #1e293b);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #334155;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+        }
+        .tree-trunk { width: 12px; background-color: #78350f; position: relative; border-radius: 2px 2px 0 0; transition: height 0.3s; }
+        .tree-foliage {
+            width: 50px; height: 50px; background-color: var(--success); border-radius: 50%;
+            position: absolute; top: -40px; left: -19px;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s;
+        }
+
+        .chart-track-bar { display: flex; height: 16px; background: #0f172a; border-radius: 6px; overflow: hidden; margin: 10px 0; border: 1px solid #334155; }
+        .chart-slice { height: 100%; transition: width 0.3s; }
+
+        .scroll-list { max-height: 140px; overflow-y: auto; }
+        .list-item {
+            background: #0f172a; border: 1px solid #334155; padding: 10px; border-radius: 8px;
+            margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;
+        }
+
+        .coach-bubble { background: rgba(139, 92, 246, 0.12); border-left: 4px solid var(--purple); padding: 12px; border-radius: 6px; font-size: 13px; color: #eee; }
+        .text-crisis { color: var(--danger) !important; text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div>
+            <h1>KopiCents <span>Clean Pro</span> 🇸🇬</h1>
+            <p>Pace-Aware Spending Guardrails</p>
+        </div>
+        <div id="streak-counter-top" style="font-size: 13px; color: var(--secondary); font-weight: bold;">🔥 System Stable</div>
+    </header>
+
+    <div class="dashboard-grid">
+        
+        <!-- LEFT COLUMN: INPUTS & CONTROLS -->
+        <div>
+            <!-- Section 1: Set Up and Reset -->
+            <div class="card">
+                <h2>1. Setup Monthly Allowance</h2>
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="weekly-allowance">Monthly Base Budget Pool ($)</label>
+                        <input type="number" id="weekly-allowance" value="240" oninput="calculateFinancials()">
+                    </div>
+                </div>
+                <button class="btn-muted" onclick="resetMonthlyCycle()">🔄 Reset Entire Month Slate</button>
+            </div>
+
+            <!-- Section 2: Middle of the Month Boosts -->
+            <div class="card">
+                <h2>2. Add Extra Income Mid-Month</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="income-source">Source Note</label>
+                        <input type="text" id="income-source" placeholder="e.g. Ang Pow, Job">
+                    </div>
+                    <div class="form-group">
+                        <label for="income-amount">Amount Added ($)</label>
+                        <input type="number" id="income-amount" step="0.50" placeholder="0.00">
+                    </div>
+                </div>
+                <button class="btn-success" onclick="injectMidMonthFunds()">+ Deposit Extra Cash</button>
+            </div>
+
+            <!-- Section 3: The AI Gatekeeper -->
+            <div class="card" style="border: 2px solid var(--purple);">
+                <h2>3. Pre-Purchase AI Gatekeeper</h2>
+                <div class="form-group">
+                    <label for="exp-desc">Item / Shop Description</label>
+                    <input type="text" id="exp-desc" placeholder="e.g. Chicken Rice, Game Top-Up">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="exp-cat">Category</label>
+                        <select id="exp-cat">
+                            <option value="Food">Food / Snacks</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Gaming">Gaming / Top-ups</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="School">School Stuff</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="exp-amount">Price ($)</label>
+                        <input type="number" id="exp-amount" step="0.05" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="form-row" style="margin-top: 10px;">
+                    <button class="btn-purple" onclick="consultSpendingCoachBeforePurchase()">1. Scan with AI Coach</button>
+                    <button class="btn-success" id="btn-finalize" onclick="addExpenseTransaction()" disabled style="opacity: 0.3; cursor: not-allowed;">2. Confirm Purchase</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: BUDGET HEALTH, TRACKING & GRAPH -->
+        <div>
+            <!-- Real-time Health Metrics Card -->
+            <div class="card" id="score-card">
+                <h2>Financial Health Score</h2>
+                <div class="score-row">
+                    <div class="score-display" id="health-score-ui">100</div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 11px; color: var(--text-muted);" id="time-pacing-label">DAY 1 OF THE MONTH</span>
+                        <p id="health-feedback" style="font-weight: bold; font-size: 13px;">Excellent</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unified History and Overview Metrics -->
+            <div class="card" id="overview-card">
+                <h2>Live Overview Summary</h2>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-bottom: 12px;">
+                    <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 10px; color: var(--text-muted);">TOTAL FUNDS</span>
+                        <p id="dash-allowance" style="font-size: 14px; font-weight: 700;">$240.00</p>
+                    </div>
+                    <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 10px; color: var(--text-muted);">SPENT OUTFLOW</span>
+                        <p id="dash-spent" style="font-size: 14px; font-weight: 700; color: var(--danger);">$0.00</p>
+                    </div>
+                    <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 10px; color: var(--text-muted);">LEFTOVER</span>
+                        <p id="dash-leftover" style="font-size: 14px; font-weight: 700; color: var(--success);">$240.00</p>
+                    </div>
+                </div>
+
+                <div class="chart-track-bar">
+                    <div id="slice-food" class="chart-slice" style="background-color: #f87171; width: 0%;"></div>
+                    <div id="slice-trans" class="chart-slice" style="background-color: #60a5fa; width: 0%;"></div>
+                    <div id="slice-game" class="chart-slice" style="background-color: #facc15; width: 0%;"></div>
+                    <div id="slice-shop" class="chart-slice" style="background-color: #c084fc; width: 0%;"></div>
+                    <div id="slice-school" class="chart-slice" style="background-color: #34d399; width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Virtual Tree Module -->
+            <div class="card" id="tree-card">
+                <div class="tree-viewport">
+                    <div class="tree-trunk" id="v-tree-trunk" style="height: 30px;">
+                        <div class="tree-foliage" id="v-tree-foliage"></div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px;">
+                    <span id="tree-stage-text">Stage: Sprout 🌱</span>
+                </div>
+            </div>
+
+            <!-- Coach Sandbox Feedback Box -->
+            <div class="card">
+                <h2>Coach Sandbox Feedback</h2>
+                <div class="coach-bubble" id="ai-coach-output">
+                    Ready to scan. Fill out item details above and press "Scan with AI Coach" to get a time-paced safety check.
+                </div>
+            </div>
+
+            <!-- Simple List Logs -->
+            <div class="card">
+                <h2>Activity Flow Feed</h2>
+                <div class="scroll-list" id="transaction-log-target"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let masterData = {
+        allowance: 240.00,
+        extraFunds: 0.00,
+        totalSpent: 0.00,
+        catTotals: { Food: 0, Transport: 0, Gaming: 0, Shopping: 0, School: 0 },
+        history: []
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const localCache = localStorage.getItem('kopicents_clean_cache');
+        if (localCache) {
+            try {
+                const parsed = JSON.parse(localCache);
+                if (parsed && typeof parsed === 'object') {
+                    masterData.allowance = parseFloat(parsed.allowance) || 240.00;
+                    masterData.extraFunds = parseFloat(parsed.extraFunds) || 0.00;
+                    masterData.totalSpent = parseFloat(parsed.totalSpent) || 0.00;
+                    masterData.catTotals = parsed.catTotals || { Food: 0, Transport: 0, Gaming: 0, Shopping: 0, School: 0 };
+                    masterData.history = parsed.history || [];
+                    
+                    document.getElementById('weekly-allowance').value = masterData.allowance;
+                    masterData.history.forEach(item => renderRowElement(item));
+                }
+            } catch (err) { console.error("Cache parsing recovery triggered", err); }
+        }
+        calculateFinancials();
+    });
+
+    function commitCacheState() {
+        localStorage.setItem('kopicents_clean_cache', JSON.stringify(masterData));
+    }
+
+    function consultSpendingCoachBeforePurchase() {
+        const desc = document.getElementById('exp-desc').value.trim();
+        const amt = parseFloat(document.getElementById('exp-amount').value) || 0;
+        const cat = document.getElementById('exp-cat').value;
+        const coachBox = document.getElementById('ai-coach-output');
+        const finalizeBtn = document.getElementById('btn-finalize');
+
+        if (!desc || amt <= 0) {
+            alert("Please input a valid description and a realistic price first!");
+            return;
+        }
+
+        const baseAlloc = parseFloat(document.getElementById('weekly-allowance').value) || 0;
+        const totalActivePool = baseAlloc + (masterData.extraFunds || 0);
+        const netLeftover = totalActivePool - (masterData.totalSpent || 0);
+        const balanceRemainingAfterThis = netLeftover - amt;
+
+        const now = new Date();
+        const currentDay = now.getDate();
+
+        if (amt >= 1000000000) {
+            coachBox.innerHTML = `🚨 **AI SYSTEM FAULT:** Attempting to log $${amt.toLocaleString()} for "${desc}". Score drops to 0 instantly.`;
+        } else if (balanceRemainingAfterThis <= 0) {
+            coachBox.innerHTML = `🛑 **AI ALERT - CRITICAL BANKRUPTCY:** Spending $${amt.toFixed(2)} leaves you completely broke ($${balanceRemainingAfterThis.toFixed(2)}). Avoid this item.`;
+        } else if (currentDay < 10 && balanceRemainingAfterThis < (totalActivePool * 0.50)) {
+            coachBox.innerHTML = `⚠️ **AI Pace Warning:** It's only day ${currentDay} of the month and this purchase drops you below 50% of your total pool! You will starve by week 3.`;
+        } else if (currentDay >= 25 && balanceRemainingAfterThis <= 10) {
+            coachBox.innerHTML = `✅ **AI End-of-Month Clearance:** You only have $${balanceRemainingAfterThis.toFixed(2)} left, but since the month is basically over (Day ${currentDay}), you're in the clear. Go for it!`;
+        } else {
+            coachBox.innerHTML = `✅ **AI Review Clear:** Checked and cleared. Safe to lock this transaction into history.`;
+        }
+
+        finalizeBtn.removeAttribute('disabled');
+        finalizeBtn.style.opacity = "1";
+        finalizeBtn.style.cursor = "pointer";
+    }
+
+    function addExpenseTransaction() {
+        const descInput = document.getElementById('exp-desc');
+        const catInput = document.getElementById('exp-cat');
+        const amtInput = document.getElementById('exp-amount');
+
+        const desc = descInput.value.trim() || catInput.value;
+        const cat = catInput.value;
+        const amt = parseFloat(amtInput.value) || 0;
+
+        if(amt <= 0) return;
+
+        const transRecord = { type: 'expense', desc, cat, amt, timestamp: Date.now() };
+        masterData.history.push(transRecord);
+        masterData.totalSpent = (masterData.totalSpent || 0) + amt;
+        
+        if (!masterData.catTotals[cat]) masterData.catTotals[cat] = 0;
+        masterData.catTotals[cat] += amt;
+
+        renderRowElement(transRecord);
+        commitCacheState();
+        calculateFinancials();
+
+        const finalizeBtn = document.getElementById('btn-finalize');
+        finalizeBtn.setAttribute('disabled', 'true');
+        finalizeBtn.style.opacity = "0.3";
+        finalizeBtn.style.cursor = "not-allowed";
+
+        descInput.value = '';
+        amtInput.value = '';
+    }
+
+    function injectMidMonthFunds() {
+        const sourceInput = document.getElementById('income-source');
+        const amtInput = document.getElementById('income-amount');
+
+        const source = sourceInput.value.trim() || "Extra Mid-Month Cash";
+        const amt = parseFloat(amtInput.value) || 0;
+
+        if (amt <= 0) {
+            alert("Please specify a valid extra income fund amount value.");
+            return;
+        }
+
+        const incomeRecord = { type: 'income', desc: source, cat: 'Boost', amt: amt, timestamp: Date.now() };
+        masterData.history.push(incomeRecord);
+        masterData.extraFunds = (masterData.extraFunds || 0) + amt;
+
+        renderRowElement(incomeRecord);
+        commitCacheState();
+        calculateFinancials();
+
+        sourceInput.value = '';
+        amtInput.value = '';
+    }
+
+    function renderRowElement(item) {
+        const target = document.getElementById('transaction-log-target');
+        const block = document.createElement('div');
+        block.className = 'list-item';
+        const rawAmt = parseFloat(item.amt) || 0;
+
+        if (item.type === 'income') {
+            block.innerHTML = `
+                <div><strong>💸 Inflow: ${item.desc}</strong></div>
+                <span style="font-weight:700; color:var(--success);">+$${rawAmt.toFixed(2)}</span>
+            `;
+        } else {
+            block.innerHTML = `
+                <div><strong>${item.desc}</strong> <small style="color:var(--text-muted);">(${item.cat})</small></div>
+                <span style="font-weight:700; color:var(--danger);">-$${rawAmt.toFixed(2)}</span>
+            `;
+        }
+        target.prepend(block);
+    }
+
+    function calculateFinancials() {
+        const baseAlloc = parseFloat(document.getElementById('weekly-allowance').value) || 0;
+        masterData.allowance = baseAlloc;
+
+        const extraInflows = parseFloat(masterData.extraFunds) || 0;
+        const totalSpentOutflows = parseFloat(masterData.totalSpent) || 0;
+
+        const totalActivePool = baseAlloc + extraInflows;
+        const netLeftover = totalActivePool - totalSpentOutflows;
+
+        document.getElementById('dash-allowance').innerText = `$${totalActivePool.toFixed(2)}`;
+        document.getElementById('dash-spent').innerText = `$${totalSpentOutflows.toFixed(2)}`;
+        document.getElementById('dash-leftover').innerText = `$${netLeftover.toFixed(2)}`;
+
+        const overviewCard = document.getElementById('overview-card');
+        const leftOverText = document.getElementById('dash-leftover');
+        const treeCard = document.getElementById('tree-card');
+        const scoreCard = document.getElementById('score-card');
+
+        if (netLeftover <= 0) {
+            overviewCard.classList.add('budget-crisis');
+            treeCard.classList.add('budget-crisis');
+            scoreCard.classList.add('budget-crisis');
+            leftOverText.classList.add('text-crisis');
+            document.getElementById('streak-counter-top').innerText = `🚨 CRITICAL METRIC ALERT`;
+        } else {
+            overviewCard.classList.remove('budget-crisis');
+            treeCard.classList.remove('budget-crisis');
+            scoreCard.classList.remove('budget-crisis');
+            leftOverText.classList.remove('text-crisis');
+            document.getElementById('streak-counter-top').innerText = `🔥 System Stable`;
+        }
+
+        const totalDivider = totalSpentOutflows || 1;
+        const cats = ['Food', 'Transport', 'Gaming', 'Shopping', 'School'];
+        cats.forEach(c => {
+            const el = document.getElementById(`slice-${c.toLowerCase()}`);
+            if(el) {
+                const share = parseFloat(masterData.catTotals[c]) || 0;
+                el.style.width = `${(share / totalDivider) * 100}%`;
+            }
+        });
+
+        // ==========================================
+        // TIME-PACED SCORE CALCULATION MOTOR
+        // ==========================================
+        const now = new Date();
+        const currentDay = now.getDate();
+        // Get total days in current month
+        const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        
+        document.getElementById('time-pacing-label').innerText = `DAY ${currentDay} OF ${totalDaysInMonth} (YEAR 2026)`;
+
+        // Calculate what fraction of the month has passed
+        const monthProgressFraction = currentDay / totalDaysInMonth; 
+        
+        // Expected maximum spent up to this exact day if pacing evenly
+        const expectedMaxSpent = totalActivePool * monthProgressFraction;
+
+        let baseScore = 100;
+
+        if (netLeftover <= 0) {
+            // Completely out of money
+            if (currentDay < 7) {
+                baseScore = 0; // Broke in Week 1 is immediate disaster status
+            } else if (currentDay >= 28) {
+                baseScore = 45; // Broke on the final 2-3 days is a passing grade
+            } else {
+                // Scaling deduction based on day
+                baseScore = Math.round((currentDay / totalDaysInMonth) * 40);
+            }
+        } else if (totalSpentOutflows > expectedMaxSpent) {
+            // Leftover is positive but burning cash way too fast
+            const burnOverloadMultiplier = totalSpentOutflows / expectedMaxSpent;
+            baseScore -= Math.round(burnOverloadMultiplier * 20);
+        } else {
+            // Tracking smoothly or saving optimally
+            baseScore += 5;
+        }
+
+        // Cap score tightly between 0 and 100
+        baseScore = Math.max(0, Math.min(Math.round(baseScore), 100));
+
+        const scoreUI = document.getElementById('health-score-ui');
+        scoreUI.innerText = baseScore;
+
+        if (baseScore >= 75) { 
+            scoreUI.style.color = 'var(--success)'; 
+            document.getElementById('health-feedback').innerText = "On Track Smoothly"; 
+        } else if (baseScore >= 40) { 
+            scoreUI.style.color = 'var(--secondary)'; 
+            document.getElementById('health-feedback').innerText = "Burning Cash Too Fast"; 
+        } else { 
+            scoreUI.style.color = 'var(--danger)'; 
+            document.getElementById('health-feedback').innerText = "Critical Budget Deficit"; 
+        }
+
+        // Tree visual logic engines
+        const trunk = document.getElementById('v-tree-trunk');
+        const foliage = document.getElementById('v-tree-foliage');
+        const stageLabel = document.getElementById('tree-stage-text');
+
+        if (netLeftover <= 0) {
+            trunk.style.height = "15px"; foliage.style.transform = "scale(0.6)"; foliage.style.backgroundColor = "var(--danger)"; stageLabel.innerText = "Stage: Withered Seedling 🍂";
+        } else if (baseScore >= 80) {
+            trunk.style.height = "55px"; foliage.style.transform = "scale(1.4)"; foliage.style.backgroundColor = "var(--success)"; stageLabel.innerText = "Stage: Growing Oak Tree 🌳";
+        } else {
+            trunk.style.height = "30px"; foliage.style.transform = "scale(1.0)"; foliage.style.backgroundColor = "var(--success)"; stageLabel.innerText = "Stage: Sprout 🌱";
+        }
+    }
+
+    function resetMonthlyCycle() {
+        if (confirm("Wipe out records and reset everything back to safe default parameters?")) {
+            localStorage.removeItem('kopicents_clean_cache');
+            
+            masterData = {
+                allowance: 240.00,
+                extraFunds: 0.00,
+                totalSpent: 0.00,
+                catTotals: { Food: 0, Transport: 0, Gaming: 0, Shopping: 0, School: 0 },
+                history: []
+            };
+
+            document.getElementById('transaction-log-target').innerHTML = '';
+            document.getElementById('weekly-allowance').value = 240;
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amount').value = '';
+            document.getElementById('income-source').value = '';
+            document.getElementById('income-amount').value = '';
+
+            calculateFinancials();
+            document.getElementById('ai-coach-output').innerText = "Reset complete. Cache storage cleared back to pristine profile defaults.";
+        }
+    }
+</script>
+
+</body>
+</html>
